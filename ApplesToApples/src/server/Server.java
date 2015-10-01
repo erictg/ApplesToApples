@@ -2,6 +2,8 @@ package server;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -45,7 +47,7 @@ public class Server {
      * set is kept so we can easily broadcast messages.
      */
     private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
-
+    private static HashSet<ObjectOutputStream> objWriter = new HashSet<ObjectOutputStream>();
     /**
      * The appplication main method, which just listens on a port and
      * spawns handler threads.
@@ -53,6 +55,7 @@ public class Server {
     public static void main(String[] args) throws Exception {
         System.out.println("The chat server is running.");
         ServerSocket listener = new ServerSocket(PORT);
+        System.out.println(listener.toString());
         try {
             while (true) {
                 new Handler(listener.accept()).start();
@@ -72,7 +75,8 @@ public class Server {
         private Socket socket;
         private BufferedReader in;
         private PrintWriter out;
-
+        private ObjectInputStream objIn;
+        private ObjectOutputStream objOut;
         /**
          * CONSTRUCTS a handler thread, squirreling away the socket.
          * All the interesting work is done in the run method.
@@ -95,14 +99,17 @@ public class Server {
                 in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
-
+                objIn = new ObjectInputStream(socket.getInputStream());
+                objOut = new ObjectOutputStream(socket.getOutputStream());
                 // Request a name from this client.  Keep requesting until
                 // a name is submitted that is not already used.  Note that
                 // CHECKING for the existence of a name and adding the name
                 // must be done while locking the set of names.
                 while (true) {
-                    out.println("SUBMITNAME");
-                    name = in.readLine();
+                    out.println("SUBMITNAME " + socket.getInetAddress());
+                    Object obj = objIn.readObject();
+                    name = (String)obj;
+                    
                     if (name == null) {
                         return;
                     }
@@ -119,19 +126,22 @@ public class Server {
                 // this client can receive broadcast messages.
                 out.println("NAMEACCEPTED");
                 writers.add(out);
-
+                objWriter.add(objOut);
                 // Accept messages from this client and broadcast them.
                 // Ignore other clients that cannot be broadcasted to.
                 while (true) {
-                    String input = in.readLine();
-                    if (input == null) {
-                        return;
-                    }
-                    for (PrintWriter writer : writers) {
-                        writer.println("MESSAGE " + name + ": " + input);
+                    Object obj = objIn.readObject();
+                    if (obj != null) {
+                    	if(obj instanceof String){
+                    		String input = (String)obj;
+                    		for (PrintWriter writer : writers) {
+                            	writer.println("MESSAGE " + name + ": " + input);
+                            }
+                    	}
+                        
                     }
                 }
-            } catch (IOException e) {
+            } catch (IOException | ClassNotFoundException e) {
                 System.out.println(e);
             } finally {
                 // This client is going down!  Remove its name and its print

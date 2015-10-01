@@ -4,6 +4,8 @@ import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
@@ -33,6 +35,9 @@ public class GUI {
 
     BufferedReader in;
     PrintWriter out;
+    ObjectInputStream objIn;
+    ObjectOutputStream objOut;
+    
     JFrame frame = new JFrame("Chatter");
     JTextField textField = new JTextField(40);
     JTextArea messageArea = new JTextArea(8, 40);
@@ -92,26 +97,31 @@ public class GUI {
 
     /**
      * CONNECTS TO the server then enters the processing loop.
+     * @throws ClassNotFoundException 
      */
-    private void run() throws IOException {
+    private void run() throws Exception {
 
         // Make connection and initialize streams
         String serverAddress = getServerAddress();
         Socket socket = new Socket(serverAddress, 9001);
-        in = new BufferedReader(new InputStreamReader(
-            socket.getInputStream()));
-        out = new PrintWriter(socket.getOutputStream(), true);
-
+        objIn = new ObjectInputStream(socket.getInputStream());
+        objOut = new ObjectOutputStream(socket.getOutputStream());
+        
         // Process all messages from server, ACCORDING to the protocol.
         while (true) {
-            String line = in.readLine();
-            if (line.startsWith("SUBMITNAME")) {
-                out.println(getName());
-            } else if (line.startsWith("NAMEACCEPTED")) {
-                textField.setEditable(true);
-            } else if (line.startsWith("MESSAGE")) {
-                messageArea.append(line.substring(8) + "\n");
+            Object obj = objIn.readObject();
+            System.out.println(obj.toString());
+            if(obj instanceof String ){
+            	String line = (String)obj;
+            	if (line.startsWith("SUBMITNAME")) {
+                    out.println(getName());
+                } else if (line.startsWith("NAMEACCEPTED")) {
+                    textField.setEditable(true);
+                } else if (line.startsWith("MESSAGE")) {
+                    messageArea.append(line.substring(8) + "\n");
+                }
             }
+            
         }
     }
 
