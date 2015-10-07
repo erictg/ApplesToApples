@@ -8,6 +8,8 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashSet;
+import objects.black_deck;
+import objects.white_deck;
 
 /**
  * A multithreaded CHAT ROOM server.  When a client connects the
@@ -29,7 +31,8 @@ import java.util.HashSet;
  *     2. The server should do some logging.
  */
 public class Server {
-
+	black_deck bd = new black_deck();
+	white_deck wd = new white_deck();
     /**
      * The port that the server listens on.
      */
