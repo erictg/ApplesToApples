@@ -8,12 +8,15 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+
+import objects.card;
 
 /**
  * A simple Swing-based client for the chat server.  Graphically
@@ -111,17 +114,25 @@ public class GUI {
         while (true) {
             Object obj = objIn.readObject();
             System.out.println(obj.toString());
-            if(obj instanceof String ){
-            	String line = (String)obj;
-            	if (line.startsWith("SUBMITNAME")) {
-                    out.println(getName());
-                } else if (line.startsWith("NAMEACCEPTED")) {
-                    textField.setEditable(true);
-                } else if (line.startsWith("MESSAGE")) {
-                    messageArea.append(line.substring(8) + "\n");
-                }
+            if(obj != null){
+	            if(obj instanceof String ){
+	            	String line = (String)obj;
+	            	if (line.startsWith("SUBMITNAME")) {
+	                    out.println(getName());
+	                } else if (line.startsWith("NAMEACCEPTED")) {
+	                    textField.setEditable(true);
+	                } else if (line.startsWith("MESSAGE")) {
+	                    messageArea.append(line.substring(8) + "\n");
+	                }
+	            }else if(obj instanceof card){
+	        		//handle card
+	        		card c = (card)obj;
+	        	}else if(obj instanceof ArrayList){
+	        		if(((ArrayList) obj).get(0) instanceof card){
+	        			ArrayList<card> cards = (ArrayList<card>)obj;
+	        		}
+	        	}
             }
-            
         }
     }
 

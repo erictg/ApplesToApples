@@ -8,7 +8,8 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashSet;
-
+import java.util.ArrayList;
+import objects.*;
 /**
  * A multithreaded CHAT ROOM server.  When a client connects the
  * server requests a screen name by sending the client the
@@ -46,8 +47,7 @@ public class Server {
      * The set of all the print writers for all the clients.  This
      * set is kept so we can easily broadcast messages.
      */
-    private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
-    private static HashSet<ObjectOutputStream> objWriter = new HashSet<ObjectOutputStream>();
+    private static HashSet<ObjectOutputStream> writers = new HashSet<ObjectOutputStream>();
     /**
      * The appplication main method, which just listens on a port and
      * spawns handler threads.
@@ -73,10 +73,8 @@ public class Server {
     private static class Handler extends Thread {
         private String name;
         private Socket socket;
-        private BufferedReader in;
-        private PrintWriter out;
-        private ObjectInputStream objIn;
-        private ObjectOutputStream objOut;
+        private ObjectInputStream in;
+        private ObjectOutputStream out;
         /**
          * CONSTRUCTS a handler thread, squirreling away the socket.
          * All the interesting work is done in the run method.
@@ -96,18 +94,14 @@ public class Server {
             try {
 
                 // Create character streams for the socket.
-                in = new BufferedReader(new InputStreamReader(
-                    socket.getInputStream()));
-                out = new PrintWriter(socket.getOutputStream(), true);
-                objIn = new ObjectInputStream(socket.getInputStream());
-                objOut = new ObjectOutputStream(socket.getOutputStream());
+                in = new ObjectInputStream(socket.getInputStream());
+                out = new ObjectOutputStream(socket.getOutputStream());
                 // Request a name from this client.  Keep requesting until
                 // a name is submitted that is not already used.  Note that
                 // CHECKING for the existence of a name and adding the name
                 // must be done while locking the set of names.
                 while (true) {
-                    out.println("SUBMITNAME " + socket.getInetAddress());
-                    Object obj = objIn.readObject();
+                    Object obj = in.readObject();
                     name = (String)obj;
                     
                     if (name == null) {
@@ -124,19 +118,24 @@ public class Server {
                 // Now that a successful name has been chosen, add the
                 // socket's print writer to the set of all writers so
                 // this client can receive broadcast messages.
-                out.println("NAMEACCEPTED");
                 writers.add(out);
-                objWriter.add(objOut);
                 // Accept messages from this client and broadcast them.
                 // Ignore other clients that cannot be broadcasted to.
                 while (true) {
-                    Object obj = objIn.readObject();
+                    Object obj = in.readObject();
                     if (obj != null) {
                     	if(obj instanceof String){
                     		String input = (String)obj;
-                    		for (PrintWriter writer : writers) {
-                            	writer.println("MESSAGE " + name + ": " + input);
+                    		for (ObjectOutputStream writer : writers) {
+                            	writer.writeObject("MESSAGE " + name + ": " + input);
                             }
+                    	}else if(obj instanceof card){
+                    		//handle card
+                    		card c = (card)obj;
+                    	}else if(obj instanceof ArrayList){
+                    		if(((ArrayList) obj).get(0) instanceof card){
+                    			ArrayList<card> cards = (ArrayList<card>)obj;
+                    		}
                     	}
                         
                     }
